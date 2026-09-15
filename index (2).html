@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shadow Blade: Realm of Legends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;800;900&family=Orbitron:wght@500;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background-color: #0b0f19;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .font-game {
+            font-family: 'Orbitron', 'Kanit', sans-serif;
+        }
+        .glow-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+        .glow-text-gold {
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+        }
+        .glow-box-red {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Touch control styling */
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            active: background 0.1s;
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        @keyframes pulse-light {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-light 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative flex flex-col justify-center items-center overflow-hidden bg-slate-950">
+
+    <div id="game-container" class="relative w-full h-full max-w-7xl max-h-[900px] flex flex-col justify-center items-center overflow-hidden shadow-2xl rounded-none md:rounded-2xl border-0 md:border border-slate-800">
+        
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="w-full h-full block bg-slate-900"></canvas>
+
+        
+        <!-- 1. MAIN MENU OVERLAY -->
+        <div id="screen-menu" class="absolute inset-0 flex flex-col items-center justify-between p-6 z-20 glass-panel">
+            <div class="mt-8 text-center">
+                <div class="inline-block px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-semibold tracking-widest uppercase mb-3 animate-pulse">
+                    Next-Gen 2D Fighting Game
+                </div>
+                <h1 class="text-4xl md:text-7xl font-extrabold font-game tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 glow-text-cyan">
+                    SHADOW BLADE
+                </h1>
+                <p class="text-slate-400 text-sm md:text-base mt-2">ศึกตำนานนักสู้เหนือมนุษย์ มุ่งสู่ความเป็นหนึ่ง</p>
+            </div>
+
+            <div class="flex flex-col gap-4 w-full max-w-md my-auto">
+                <button id="btn-start" class="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xl shadow-lg shadow-cyan-500/30 transition-all transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-play"></i> เริ่มเล่นเกม
+                </button>
+                <button id="btn-controls" class="w-full py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-lg border border-slate-700 transition-all flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-keyboard"></i> ปุ่มควบคุม & วิธีเล่น
+                </button>
+                <button id="btn-reset-data" class="w-full py-2.5 rounded-xl bg-red-950/40 hover:bg-red-900/50 text-red-400 font-medium text-sm border border-red-900/30 transition-all">
+                    <i class="fa-solid fa-rotate-right"></i> รีเซ็ตข้อมูลการปลดล็อก
+                </button>
+            </div>
+
+            <div class="text-slate-500 text-xs text-center mb-2">
+                พัฒนาด้วย HTML5 Canvas & Web Audio API • 60 FPS Smooth Gameplay
+            </div>
+        </div>
+
+        <!-- 2. CHARACTER SELECT OVERLAY -->
+        <div id="screen-char-select" class="absolute inset-0 hidden flex-col justify-between p-4 md:p-8 z-20 glass-panel">
+            <div class="text-center">
+                <h2 class="text-2xl md:text-4xl font-extrabold font-game text-cyan-400 glow-text-cyan">เลือกตัวละครของคุณ</h2>
+                <p class="text-slate-400 text-xs md:text-sm">เลือกนักสู้ที่มีสไตล์การต่อสู้ที่คุณชอบ</p>
+            </div>
+
+            <div id="char-list" class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 my-auto max-w-5xl mx-auto w-full">
+                <!-- Dynamic Character Cards inserted by JS -->
+            </div>
+
+            <div class="flex justify-between items-center w-full max-w-5xl mx-auto">
+                <button id="btn-back-to-menu" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> ย้อนกลับ
+                </button>
+                <button id="btn-confirm-char" class="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/20 transition transform hover:-translate-y-0.5">
+                    เลือกด่าน <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. STAGE SELECT OVERLAY -->
+        <div id="screen-stage-select" class="absolute inset-0 hidden flex-col justify-between p-4 md:p-8 z-20 glass-panel">
+            <div class="text-center">
+                <h2 class="text-2xl md:text-4xl font-extrabold font-game text-amber-400 glow-text-gold">เลือกสนามต่อสู้ (5 ด่าน)</h2>
+                <p class="text-slate-400 text-xs md:text-sm">เอาชนะศัตรูในแต่ละด่านเพื่อปลดล็อกด่านถัดไป</p>
+            </div>
+
+            <div id="stage-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 my-auto max-w-6xl mx-auto w-full">
+                <!-- Dynamic Stage Cards inserted by JS -->
+            </div>
+
+            <div class="flex justify-between items-center w-full max-w-6xl mx-auto">
+                <button id="btn-back-to-char" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> เลือกตัวละคร
+                </button>
+                <button id="btn-start-fight" class="px-10 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white font-extrabold text-xl shadow-lg shadow-amber-500/30 transition transform hover:scale-105">
+                    เข้าสู่การต่อสู้! <i class="fa-solid fa-swords ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. CONTROLS INSTRUCTION MODAL -->
+        <div id="modal-controls" class="absolute inset-0 hidden flex items-center justify-center p-4 z-30 bg-black/80 backdrop-blur-md">
+            <div class="glass-panel p-6 md:p-8 rounded-2xl max-w-2xl w-full border border-slate-700 shadow-2xl">
+                <h3 class="text-2xl font-bold font-game text-cyan-400 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-gamepad"></i> ปุ่มควบคุมการเล่น
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+                    <div class="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
+                        <div class="font-bold text-amber-400 mb-2">🎮 สำหรับคีย์บอร์ด (PC)</div>
+                        <ul class="space-y-1.5 text-slate-300">
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">A / D</b> : เดินซ้าย / ขวา</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">W</b> : กระโดด</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">S</b> : ตั้งการ์ดป้องกัน (ลดความเสียหาย)</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">J</b> : โจมตีเบา (Light Attack)</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">K</b> : โจมตีหนัก (Heavy Attack)</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">L</b> : ท่าไม้ตาย (เมื่อเกจครบ 100%)</li>
+                            <li><b class="text-white bg-slate-700 px-1.5 py-0.5 rounded">Space</b> : พุ่งหลบ (Dash)</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
+                        <div class="font-bold text-cyan-400 mb-2">📱 สำหรับสมาร์ทโฟน (Touch)</div>
+                        <p class="text-slate-300 mb-2">ระบบจะแสดงปุ่มควบคุมเสมือนจริงบนหน้าจออัตโนมัติ:</p>
+                        <ul class="space-y-1.5 text-slate-300">
+                            <li>• ปุ่มทิศทางซ้าย/ขวา/ขึ้น/ลง ทางด้านซ้าย</li>
+                            <li>• ปุ่มโจมตี J, K, L, Dash ทางด้านขวา</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button id="btn-close-controls" class="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold transition">
+                    เข้าใจแล้ว
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. IN-GAME HUD OVERLAY -->
+        <div id="hud-overlay" class="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between z-10 hidden">
+            <!-- Top Bar (Health Bars & Timer) -->
+            <div class="flex items-start justify-between gap-2 md:gap-6 w-full">
+                <!-- Player Status -->
+                <div class="flex-1 bg-slate-900/80 backdrop-blur-md p-2 md:p-3 rounded-2xl border border-slate-700 flex flex-col gap-1.5 pointer-events-auto">
+                    <div class="flex justify-between items-center">
+                        <span id="hud-player-name" class="font-bold font-game text-cyan-400 text-xs md:text-sm">PLAYER</span>
+                        <span id="hud-player-hp-text" class="text-xs text-slate-300 font-mono">100/100</span>
+                    </div>
+                    <!-- HP Bar -->
+                    <div class="w-full bg-slate-800 h-3 md:h-5 rounded-full overflow-hidden border border-slate-700">
+                        <div id="hud-player-hp-bar" class="bg-gradient-to-r from-emerald-500 to-green-400 h-full w-full transition-all duration-200"></div>
+                    </div>
+                    <!-- Super Energy Gauge -->
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                        <div id="hud-player-sp-bar" class="bg-gradient-to-r from-cyan-400 to-fuchsia-500 h-full w-0 transition-all duration-200"></div>
+                    </div>
+                </div>
+
+                <!-- Match Timer & Stage Info -->
+                <div class="flex flex-col items-center bg-slate-900/90 backdrop-blur-md px-3 py-1.5 md:px-5 md:py-2 rounded-2xl border border-slate-700 pointer-events-auto">
+                    <span id="hud-stage-title" class="text-[10px] md:text-xs font-semibold text-amber-400 uppercase tracking-widest">STAGE 1</span>
+                    <span id="hud-timer" class="font-game font-extrabold text-xl md:text-3xl text-white">99</span>
+                </div>
+
+                <!-- Enemy Status -->
+                <div class="flex-1 bg-slate-900/80 backdrop-blur-md p-2 md:p-3 rounded-2xl border border-slate-700 flex flex-col gap-1.5 pointer-events-auto">
+                    <div class="flex justify-between items-center">
+                        <span id="hud-enemy-hp-text" class="text-xs text-slate-300 font-mono">100/100</span>
+                        <span id="hud-enemy-name" class="font-bold font-game text-red-400 text-xs md:text-sm">ENEMY</span>
+                    </div>
+                    <!-- HP Bar -->
+                    <div class="w-full bg-slate-800 h-3 md:h-5 rounded-full overflow-hidden border border-slate-700 flex justify-end">
+                        <div id="hud-enemy-hp-bar" class="bg-gradient-to-r from-red-500 to-amber-500 h-full w-full transition-all duration-200"></div>
+                    </div>
+                    <div class="text-[10px] text-right text-slate-400 uppercase font-semibold">TARGET</div>
+                </div>
+            </div>
+
+            <!-- Middle Combo Display -->
+            <div class="absolute top-24 left-6 pointer-events-none">
+                <div id="combo-container" class="hidden flex-col items-start transition-all transform scale-100">
+                    <span id="combo-count" class="font-game font-black text-4xl md:text-6xl italic text-amber-400 glow-text-gold">5</span>
+                    <span class="font-extrabold text-xs md:text-sm tracking-widest text-white uppercase bg-red-600/80 px-2 py-0.5 rounded">HITS COMBO!</span>
+                </div>
+            </div>
+
+            <!-- Mobile Virtual Controllers (Visible on touch devices or small screens) -->
+            <div id="touch-controls" class="flex justify-between items-end w-full pointer-events-auto md:hidden pb-2 opacity-90">
+                <!-- D-Pad -->
+                <div class="grid grid-cols-3 gap-1.5 w-36 h-36">
+                    <div></div>
+                    <button id="tbtn-up" class="touch-btn rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-caret-up"></i></button>
+                    <div></div>
+                    <button id="tbtn-left" class="touch-btn rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-caret-left"></i></button>
+                    <button id="tbtn-down" class="touch-btn rounded-xl flex items-center justify-center text-white text-xs font-bold text-amber-300">DEF</button>
+                    <button id="tbtn-right" class="touch-btn rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-caret-right"></i></button>
+                    <div></div>
+                    <button id="tbtn-dash" class="touch-btn rounded-xl flex items-center justify-center text-cyan-300 text-xs font-bold">DASH</button>
+                    <div></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-3 gap-2 w-48 h-36">
+                    <button id="tbtn-atk1" class="touch-btn rounded-full bg-blue-600/40 border-blue-400 flex items-center justify-center text-white font-bold text-sm">J</button>
+                    <button id="tbtn-atk2" class="touch-btn rounded-full bg-red-600/40 border-red-400 flex items-center justify-center text-white font-bold text-sm">K</button>
+                    <button id="tbtn-sp" class="touch-btn rounded-full bg-amber-500/50 border-amber-300 flex items-center justify-center text-amber-300 font-extrabold text-xs">ULTI</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. GAME RESULT SUMMARY OVERLAY -->
+        <div id="screen-result" class="absolute inset-0 hidden flex-col items-center justify-center p-6 z-30 glass-panel">
+            <div class="max-w-md w-full bg-slate-900/90 border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+                <!-- Background ambient glow -->
+                <div id="result-glow" class="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl"></div>
+
+                <div id="result-badge" class="px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3">
+                    VICTORY ACHIEVED
+                </div>
+
+                <h2 id="result-title" class="text-4xl md:text-5xl font-black font-game text-white mb-2">
+                    ชัยชนะ!
+                </h2>
+                <p id="result-subtitle" class="text-slate-400 text-sm mb-6">คุณได้ทำการพิชิตด่านนี้เรียบร้อยแล้ว</p>
+
+                <!-- Rank & Score Box -->
+                <div class="w-full bg-slate-800/80 rounded-2xl p-4 border border-slate-700 flex items-center justify-around mb-6">
+                    <div class="flex flex-col items-center">
+                        <span class="text-slate-400 text-xs font-semibold">ระดับ Rank</span>
+                        <span id="result-rank" class="font-game font-black text-5xl text-amber-400 glow-text-gold">S</span>
+                    </div>
+                    <div class="h-12 w-[1px] bg-slate-700"></div>
+                    <div class="flex flex-col items-start">
+                        <span class="text-slate-400 text-xs font-semibold">คะแนนรวม</span>
+                        <span id="result-score" class="font-mono font-bold text-2xl text-cyan-400">12,450</span>
+                        <span id="result-combo" class="text-[11px] text-slate-400">Max Combo: 12 Hits</span>
+                    </div>
+                </div>
+
+                <div id="unlock-msg" class="hidden w-full p-2.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock-open text-amber-400"></i> ปลดล็อกด่านถัดไปเรียบร้อยแล้ว!
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col gap-3 w-full">
+                    <button id="btn-next-stage" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/25 transition">
+                        ด่านถัดไป <i class="fa-solid fa-forward ml-2"></i>
+                    </button>
+                    <button id="btn-retry-stage" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> เล่นอีกครั้ง
+                    </button>
+                    <button id="btn-result-stage-select" class="w-full py-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm transition">
+                        กลับสู่หน้าเลือกด่าน
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    class SoundEffects {
+        constructor() {
+            this.ctx = null;
+            this.initialized = false;
+        }
+
+        init() {
+            if (this.initialized) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    this.ctx = new AudioCtx();
+                    this.initialized = true;
+                }
+            } catch (e) {
+                console.error("Web Audio API is not supported", e);
+            }
+        }
+
+        playHit() {
+            if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.15);
+        }
+
+        playBlock() {
+            if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.1);
+        }
+
+        playSpecial() {
+            if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.35);
+            gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.35);
+        }
+
+        playVictory() {
+            if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            const notes = [261.63, 329.63, 392.00, 523.25];
+            notes.forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(this.ctx.currentTime + idx * 0.12);
+                osc.stop(this.ctx.currentTime + idx * 0.12 + 0.25);
+            });
+        }
+    }
+    const soundFx = new SoundEffects();
+
+    const CHARACTERS = [
+        {
+            id: 'ignis',
+            name: 'Ignis',
+            title: 'นักดาบเพลิง (Flame Swordsman)',
+            color: '#f97316', // Orange
+            accent: '#ef4444',
+            hp: 100,
+            speed: 5.5,
+            atkPower: 12,
+            defense: 0.1,
+            avatarIcon: 'fa-fire-flame-curved',
+            desc: 'ตวัดเพลงดาบเพลิงพิฆาต มีพลังทำลายล้างและคอมโบที่สมดุล'
+        },
+        {
+            id: 'zephyr',
+            name: 'Zephyr',
+            title: 'คมดาบเงาสังหาร (Shadow Blade)',
+            color: '#06b6d4', // Cyan
+            accent: '#3b82f6',
+            hp: 100,
+            speed: 7.2,
+            atkPower: 9,
+            defense: 0.05,
+            avatarIcon: 'fa-bolt',
+            desc: 'เคลื่อนที่รวดเร็ว ฟันเพลงดาบความเร็วสูง รวดเร็วและพริ้วไหว'
+        },
+        {
+            id: 'titan',
+            name: 'Titan',
+            title: 'ดาบยักษ์เหล็ก (Greatsword Vanguard)',
+            color: '#eab308', // Gold
+            accent: '#78350f',
+            hp: 100,
+            speed: 4.0,
+            atkPower: 16,
+            defense: 0.25,
+            avatarIcon: 'fa-shield-halved',
+            desc: 'ใช้ดาบเล่มยักษ์ เกราะหนา การฟันแต่ละฮิตหนักหน่วงและรุนแรง'
+        },
+        {
+            id: 'valkyrie',
+            name: 'Valkyrie',
+            title: 'ดาบเวทออร่า (Rune Blade)',
+            color: '#a855f7', // Purple
+            accent: '#ec4899',
+            hp: 100,
+            speed: 6.0,
+            atkPower: 11,
+            defense: 0.15,
+            avatarIcon: 'fa-wand-magic-sparkles',
+            desc: 'ตวัดดาบปล่อยคลื่นพลังคมดาบเวทออร่าโจมตีระยะกลาง'
+        }
+    ];
+
+    const STAGES = [
+        {
+            id: 1,
+            name: 'Cyber Street',
+            bgGradient: ['#0f172a', '#1e1b4b'],
+            bgType: 'city',
+            enemy: { name: 'Cyber Thug', hp: 100, atk: 8, speed: 3.8, color: '#f43f5e', type: 'brawler' },
+            desc: 'ถนนนีออนยามค่ำคืนในเมืองอนาคต'
+        },
+        {
+            id: 2,
+            name: 'Mystic Forest',
+            bgGradient: ['#022c22', '#064e3b'],
+            bgType: 'forest',
+            enemy: { name: 'Shadow Ninja', hp: 100, atk: 11, speed: 5.5, color: '#10b981', type: 'ninja' },
+            desc: 'ป่าลึกลับเรืองแสง รวดเร็วและว่องไว'
+        },
+        {
+            id: 3,
+            name: 'Magma Core',
+            bgGradient: ['#450a0a', '#7f1d1d'],
+            bgType: 'volcano',
+            enemy: { name: 'Fire Golem', hp: 100, atk: 14, speed: 3.5, color: '#f97316', type: 'heavy' },
+            desc: 'ถ้ำลาวาใต้รอยแยกซุ่มซ่อนอันตราย'
+        },
+        {
+            id: 4,
+            name: 'Sky Temple',
+            bgGradient: ['#1e3a8a', '#312e81'],
+            bgType: 'temple',
+            enemy: { name: 'Storm Monk', hp: 100, atk: 16, speed: 4.8, color: '#38bdf8', type: 'monk' },
+            desc: 'วิหารลอยฟ้าท่ามกลางสายฟ้าและเมฆหมอก'
+        },
+        {
+            id: 5,
+            name: 'Void Citadel',
+            bgGradient: ['#18181b', '#2e1065'],
+            bgType: 'void',
+            enemy: { name: 'Void Sovereign (BOSS)', hp: 100, atk: 20, speed: 5.8, color: '#c084fc', type: 'boss' },
+            desc: 'ปราสาทห้วงอวกาศ ศัตรูระดับจอมทัพ'
+        }
+    ];
+
+    const GameData = {
+        unlockedStage: 1,
+        selectedChar: CHARACTERS[0],
+        selectedStage: STAGES[0],
+        highScores: {},
+
+        load() {
+            const saved = localStorage.getItem('shadow_blade_save');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    this.unlockedStage = parsed.unlockedStage || 1;
+                    this.highScores = parsed.highScores || {};
+                } catch(e) {}
+            }
+        },
+
+        save() {
+            localStorage.setItem('shadow_blade_save', JSON.stringify({
+                unlockedStage: this.unlockedStage,
+                highScores: this.highScores
+            }));
+        },
+
+        reset() {
+            this.unlockedStage = 1;
+            this.highScores = {};
+            this.save();
+        }
+    };
+    GameData.load();
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        const container = document.getElementById('game-container');
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Key states
+    const keys = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        atk1: false,
+        atk2: false,
+        sp: false,
+        dash: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+        soundFx.init();
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.up = true;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.down = true;
+        if (e.code === 'KeyJ') keys.atk1 = true;
+        if (e.code === 'KeyK') keys.atk2 = true;
+        if (e.code === 'KeyL') keys.sp = true;
+        if (e.code === 'Space') keys.dash = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.up = false;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.down = false;
+        if (e.code === 'KeyJ') keys.atk1 = false;
+        if (e.code === 'KeyK') keys.atk2 = false;
+        if (e.code === 'KeyL') keys.sp = false;
+        if (e.code === 'Space') keys.dash = false;
+    });
+
+    // Mobile Touch Bindings
+    function bindTouchBtn(id, keyProp) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const start = (e) => { e.preventDefault(); soundFx.init(); keys[keyProp] = true; };
+        const end = (e) => { e.preventDefault(); keys[keyProp] = false; };
+        btn.addEventListener('touchstart', start);
+        btn.addEventListener('touchend', end);
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('mouseup', end);
+    }
+    bindTouchBtn('tbtn-up', 'up');
+    bindTouchBtn('tbtn-left', 'left');
+    bindTouchBtn('tbtn-right', 'right');
+    bindTouchBtn('tbtn-down', 'down');
+    bindTouchBtn('tbtn-dash', 'dash');
+    bindTouchBtn('tbtn-atk1', 'atk1');
+    bindTouchBtn('tbtn-atk2', 'atk2');
+    bindTouchBtn('tbtn-sp', 'sp');
+
+    class ParticleEngine {
+        constructor() {
+            this.particles = [];
+            this.dmgTexts = [];
+            this.shakeDuration = 0;
+            this.shakeIntensity = 0;
+        }
+
+        shake(duration = 10, intensity = 6) {
+            this.shakeDuration = duration;
+            this.shakeIntensity = intensity;
+        }
+
+        addSpark(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                this.particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    life: 1,
+                    decay: Math.random() * 0.05 + 0.03
+                });
+            }
+        }
+
+        addDmgText(x, y, text, color = '#ffffff') {
+            this.dmgTexts.push({
+                x, y, text, color,
+                vy: -2,
+                alpha: 1,
+                decay: 0.025
+            });
+        }
+
+        updateAndDraw(ctx) {
+            // Apply Screen Shake
+            if (this.shakeDuration > 0) {
+                const rx = (Math.random() - 0.5) * this.shakeIntensity;
+                const ry = (Math.random() - 0.5) * this.shakeIntensity;
+                ctx.translate(rx, ry);
+                this.shakeDuration--;
+            }
+
+            // Render Particles
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+
+                if (p.life <= 0) {
+                    this.particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Render Floating Damage Text
+            for (let i = this.dmgTexts.length - 1; i >= 0; i--) {
+                const dt = this.dmgTexts[i];
+                dt.y += dt.vy;
+                dt.alpha -= dt.decay;
+
+                if (dt.alpha <= 0) {
+                    this.dmgTexts.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = dt.alpha;
+                ctx.fillStyle = dt.color;
+                ctx.font = 'bold 20px Orbitron, Kanit';
+                ctx.fillText(dt.text, dt.x, dt.y);
+                ctx.restore();
+            }
+        }
+    }
+    const fx = new ParticleEngine();
+
+    class Fighter {
+        constructor(isPlayer, config, startX) {
+            this.isPlayer = isPlayer;
+            this.config = config;
+            this.x = startX;
+            this.y = 0;
+            this.vx = 0;
+            this.vy = 0;
+            this.width = 50;
+            this.height = 100;
+            
+            this.maxHp = config.hp || 100;
+            this.hp = this.maxHp;
+            this.sp = 0; // Special Energy 0-100
+            this.speed = config.speed || 5;
+            this.facing = isPlayer ? 1 : -1; // 1: Right, -1: Left
+
+            this.isGrounded = false;
+            this.isBlocking = false;
+            this.isAttacking = false;
+            this.atkType = null; // 'light', 'heavy', 'special'
+            this.attackBox = { x: 0, y: 0, w: 0, h: 0 };
+            
+            this.state = 'idle'; // idle, walk, attack, hurt, block
+            this.animFrame = 0;
+            this.atkCooldown = 0;
+            this.dashCooldown = 0;
+            this.hurtTimer = 0;
+
+            // AI specific
+            this.aiDecisionTimer = 0;
+            this.aiAction = 'idle';
+        }
+
+        update(groundY, opponent) {
+            // Apply Gravity
+            this.vy += 0.8;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Ground Collision
+            if (this.y + this.height >= groundY) {
+                this.y = groundY - this.height;
+                this.vy = 0;
+                this.isGrounded = true;
+            } else {
+                this.isGrounded = false;
+            }
+
+            // Face Opponent automatically if not attacking
+            if (!this.isAttacking && opponent) {
+                this.facing = this.x < opponent.x ? 1 : -1;
+            }
+
+            // Cooldown ticks
+            if (this.atkCooldown > 0) this.atkCooldown--;
+            if (this.dashCooldown > 0) this.dashCooldown--;
+            if (this.hurtTimer > 0) {
+                this.hurtTimer--;
+                if (this.hurtTimer === 0) this.state = 'idle';
+            }
+
+            // Handle Input / Actions
+            if (this.isPlayer) {
+                this.handlePlayerInput();
+            } else {
+                this.handleAI(opponent);
+            }
+
+            // Bound in screen
+            this.x = Math.max(20, Math.min(canvas.width - this.width - 20, this.x));
+            
+            // Friction
+            if (this.isGrounded) this.vx *= 0.75;
+        }
+
+        handlePlayerInput() {
+            if (this.hurtTimer > 0) return;
+
+            // Guard / Block
+            this.isBlocking = keys.down && this.isGrounded;
+            if (this.isBlocking) {
+                this.state = 'block';
+                return;
+            }
+
+            // Movement
+            if (keys.left) {
+                this.vx = -this.speed;
+                this.state = 'walk';
+            } else if (keys.right) {
+                this.vx = this.speed;
+                this.state = 'walk';
+            } else if (this.isGrounded && !this.isAttacking) {
+                this.state = 'idle';
+            }
+
+            // Jump
+            if (keys.up && this.isGrounded) {
+                this.vy = -15;
+                this.isGrounded = false;
+            }
+
+            // Dash
+            if (keys.dash && this.dashCooldown === 0) {
+                this.vx = this.facing * 16;
+                this.dashCooldown = 30;
+                fx.addSpark(this.x + this.width/2, this.y + this.height/2, this.config.color, 12);
+            }
+
+            // Attacks
+            if (this.atkCooldown === 0 && !this.isAttacking) {
+                if (keys.atk1) this.performAttack('light');
+                else if (keys.atk2) this.performAttack('heavy');
+                else if (keys.sp && this.sp >= 100) this.performAttack('special');
+            }
+        }
+
+        handleAI(player) {
+            if (this.hurtTimer > 0) return;
+
+            const dist = Math.abs(this.x - player.x);
+            this.aiDecisionTimer++;
+
+            if (this.aiDecisionTimer > 20) {
+                this.aiDecisionTimer = 0;
+                const rand = Math.random();
+
+                if (dist > 120) {
+                    this.aiAction = 'approach';
+                } else if (dist < 80 && rand < 0.3) {
+                    this.aiAction = 'block';
+                } else {
+                    if (rand < 0.5) this.aiAction = 'atk1';
+                    else if (rand < 0.8) this.aiAction = 'atk2';
+                    else this.aiAction = 'jumpAtk';
+                }
+            }
+
+            // Execute AI Action
+            if (this.aiAction === 'approach') {
+                this.vx = (player.x > this.x ? 1 : -1) * (this.speed * 0.85);
+            } else if (this.aiAction === 'block') {
+                this.isBlocking = true;
+            } else if (this.aiAction === 'atk1' && this.atkCooldown === 0) {
+                this.performAttack('light');
+            } else if (this.aiAction === 'atk2' && this.atkCooldown === 0) {
+                this.performAttack('heavy');
+            } else if (this.aiAction === 'jumpAtk' && this.isGrounded) {
+                this.vy = -14;
+                this.performAttack('heavy');
+            }
+        }
+
+        performAttack(type) {
+            this.isAttacking = true;
+            this.atkType = type;
+            this.state = 'attack';
+
+            let duration = 20;
+            let range = 60;
+
+            if (type === 'light') {
+                duration = 15;
+                this.atkCooldown = 22;
+            } else if (type === 'heavy') {
+                duration = 25;
+                range = 80;
+                this.atkCooldown = 35;
+            } else if (type === 'special') {
+                duration = 40;
+                range = 140;
+                this.sp = 0;
+                this.atkCooldown = 60;
+                soundFx.playSpecial();
+            }
+
+            // Hitbox calculation
+            const hitX = this.facing === 1 ? this.x + this.width : this.x - range;
+            this.attackBox = {
+                x: hitX,
+                y: this.y + 15,
+                w: range,
+                h: this.height - 30,
+                damage: type === 'light' ? this.config.atkPower : type === 'heavy' ? this.config.atkPower * 1.8 : this.config.atkPower * 3.2,
+                duration
+            };
+
+            setTimeout(() => {
+                this.isAttacking = false;
+            }, duration * 16.6);
+        }
+
+        takeDamage(dmg, isSpecial = false) {
+            if (this.isBlocking && !isSpecial) {
+                const reduced = dmg * 0.2;
+                this.hp -= reduced;
+                soundFx.playBlock();
+                fx.addSpark(this.x + this.width/2, this.y + 30, '#f59e0b', 6);
+                fx.addDmgText(this.x + 10, this.y - 10, Math.round(reduced) + ' (DEF)', '#f59e0b');
+                return false;
+            }
+
+            const finalDmg = Math.round(dmg * (1 - (this.config.defense || 0)));
+            this.hp = Math.max(0, this.hp - finalDmg);
+            this.hurtTimer = 15;
+            this.state = 'hurt';
+            
+            // Fill super gauge when taking damage or hitting
+            this.sp = Math.min(100, this.sp + 12);
+
+            soundFx.playHit();
+            fx.shake(12, 8);
+            fx.addSpark(this.x + this.width/2, this.y + 40, '#ef4444', 12);
+            fx.addDmgText(this.x + 10, this.y - 10, finalDmg, '#ef4444');
+            return true;
+        }
+
+        draw(ctx) {
+            ctx.save();
+
+            // Flash effect when hurt
+            if (this.hurtTimer % 4 > 2) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            // Character Body Container
+            const charColor = this.config.color || '#3b82f6';
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(this.x + this.width/2, this.y + this.height, 25, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main Body (Stylized Fighter Figure)
+            ctx.fillStyle = charColor;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+
+            // Torso
+            ctx.beginPath();
+            ctx.roundRect(this.x, this.y + 25, this.width, 50, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            // Head & Eye visor
+            ctx.beginPath();
+            ctx.arc(this.x + this.width/2, this.y + 15, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Visor line
+            ctx.fillStyle = '#ffffff';
+            const eyeX = this.facing === 1 ? this.x + this.width/2 + 2 : this.x + this.width/2 - 10;
+            ctx.fillRect(eyeX, this.y + 12, 8, 4);
+
+            // Draw Sword Weapon (ดาบประจำตัว)
+            ctx.save();
+            const handX = this.facing === 1 ? this.x + this.width - 2 : this.x + 2;
+            const handY = this.y + 45;
+            
+            ctx.translate(handX, handY);
+            // Dynamic Sword angle depending on stance
+            let swordAngle = this.facing * (Math.PI / 4);
+            if (this.isAttacking) {
+                swordAngle = this.facing * (Math.PI * 0.75);
+            } else if (this.isBlocking) {
+                swordAngle = -this.facing * (Math.PI / 3);
+            }
+            ctx.rotate(swordAngle);
+
+            // Handle (ด้ามจับดาบ)
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(-2, 0, 4, 12);
+            // Guard (โกร่งดาบ)
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-8, -2, 16, 4);
+            // Blade (ใบดาบส่องสว่าง)
+            ctx.fillStyle = '#f8fafc';
+            ctx.shadowColor = charColor;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(-3, -2);
+            ctx.lineTo(3, -2);
+            ctx.lineTo(1.5, -45);
+            ctx.lineTo(0, -52); // Sharp blade point
+            ctx.lineTo(-1.5, -45);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = charColor;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+
+            // Guard aura if blocking
+            if (this.isBlocking) {
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width/2, this.y + this.height/2, 55, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Draw Sword Slash FX (เอฟเฟกต์รอยตวัดดาบ)
+            if (this.isAttacking) {
+                ctx.save();
+                const strokeStyle = this.atkType === 'special' ? '#f43f5e' : (this.config.color || '#f59e0b');
+                ctx.strokeStyle = strokeStyle;
+                ctx.shadowColor = strokeStyle;
+                ctx.shadowBlur = 20;
+                ctx.lineWidth = this.atkType === 'special' ? 8 : 4;
+
+                ctx.beginPath();
+                const arcCenterX = this.facing === 1 ? this.x + this.width + 10 : this.x - 10;
+                const startAngle = this.facing === 1 ? -Math.PI / 2.5 : Math.PI * 0.7;
+                const endAngle = this.facing === 1 ? Math.PI / 2.5 : Math.PI * 1.3;
+                
+                ctx.arc(arcCenterX, this.y + 40, this.attackBox.w * 0.8, startAngle, endAngle, false);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+    }
+
+    class GameEngine {
+        constructor() {
+            this.state = 'MENU'; // MENU, CHAR_SELECT, STAGE_SELECT, PLAYING, RESULT
+            this.player = null;
+            this.enemy = null;
+            this.timer = 99;
+            this.timerInterval = null;
+            this.combo = 0;
+            this.maxCombo = 0;
+            this.score = 0;
+            this.matchTime = 0;
+        }
+
+        initMatch() {
+            const groundY = canvas.height - 80;
+            this.player = new Fighter(true, GameData.selectedChar, canvas.width * 0.25);
+            this.enemy = new Fighter(false, GameData.selectedStage.enemy, canvas.width * 0.75);
+
+            this.timer = 99;
+            this.combo = 0;
+            this.maxCombo = 0;
+            this.score = 0;
+            this.matchTime = 0;
+
+            clearInterval(this.timerInterval);
+            this.timerInterval = setInterval(() => {
+                if (this.state === 'PLAYING') {
+                    this.timer--;
+                    this.matchTime++;
+                    document.getElementById('hud-timer').innerText = this.timer;
+                    if (this.timer <= 0) this.endMatch(false);
+                }
+            }, 1000);
+
+            // Update HUD Titles
+            document.getElementById('hud-player-name').innerText = GameData.selectedChar.name.toUpperCase();
+            document.getElementById('hud-enemy-name').innerText = GameData.selectedStage.enemy.name.toUpperCase();
+            document.getElementById('hud-stage-title').innerText = `STAGE ${GameData.selectedStage.id}`;
+            
+            this.state = 'PLAYING';
+            document.getElementById('hud-overlay').classList.remove('hidden');
+        }
+
+        update() {
+            if (this.state !== 'PLAYING') return;
+
+            const groundY = canvas.height - 80;
+            this.player.update(groundY, this.enemy);
+            this.enemy.update(groundY, this.player);
+
+            // Check Hit Collision
+            this.checkCombatCollision(this.player, this.enemy, true);
+            this.checkCombatCollision(this.enemy, this.player, false);
+
+            // Update HUD Progress Bars
+            const playerHpPct = (this.player.hp / this.player.maxHp) * 100;
+            const enemyHpPct = (this.enemy.hp / this.enemy.maxHp) * 100;
+
+            document.getElementById('hud-player-hp-bar').style.width = `${Math.max(0, playerHpPct)}%`;
+            document.getElementById('hud-player-hp-text').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
+            
+            document.getElementById('hud-player-sp-bar').style.width = `${this.player.sp}%`;
+
+            document.getElementById('hud-enemy-hp-bar').style.width = `${Math.max(0, enemyHpPct)}%`;
+            document.getElementById('hud-enemy-hp-text').innerText = `${Math.ceil(this.enemy.hp)}/${this.enemy.maxHp}`;
+
+            // Check Win / Lose
+            if (this.enemy.hp <= 0) {
+                this.endMatch(true);
+            } else if (this.player.hp <= 0) {
+                this.endMatch(false);
+            }
+        }
+
+        checkCombatCollision(attacker, defender, isPlayerAttacker) {
+            if (attacker.isAttacking && attacker.attackBox) {
+                const ab = attacker.attackBox;
+                if (
+                    ab.x < defender.x + defender.width &&
+                    ab.x + ab.w > defender.x &&
+                    ab.y < defender.y + defender.height &&
+                    ab.y + ab.h > defender.y
+                ) {
+                    const hitSuccess = defender.takeDamage(ab.damage, attacker.atkType === 'special');
+                    attacker.isAttacking = false; // Prevents multi-hit per swing
+
+                    if (isPlayerAttacker && hitSuccess) {
+                        this.combo++;
+                        this.maxCombo = Math.max(this.maxCombo, this.combo);
+                        this.score += ab.damage * 10 * (1 + this.combo * 0.1);
+                        this.showComboUI(this.combo);
+                        attacker.sp = Math.min(100, attacker.sp + 15);
+                    } else if (!isPlayerAttacker) {
+                        this.combo = 0;
+                        this.hideComboUI();
+                    }
+                }
+            }
+        }
+
+        showComboUI(count) {
+            const container = document.getElementById('combo-container');
+            const countEl = document.getElementById('combo-count');
+            if (count > 1) {
+                countEl.innerText = count;
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+            }
+        }
+
+        hideComboUI() {
+            const container = document.getElementById('combo-container');
+            container.classList.add('hidden');
+            container.classList.remove('flex');
+        }
+
+        endMatch(isVictory) {
+            this.state = 'RESULT';
+            clearInterval(this.timerInterval);
+            document.getElementById('hud-overlay').classList.add('hidden');
+
+            const screenResult = document.getElementById('screen-result');
+            screenResult.classList.remove('hidden');
+            screenResult.classList.add('flex');
+
+            const title = document.getElementById('result-title');
+            const sub = document.getElementById('result-subtitle');
+            const rankEl = document.getElementById('result-rank');
+            const scoreEl = document.getElementById('result-score');
+            const comboEl = document.getElementById('result-combo');
+            const unlockMsg = document.getElementById('unlock-msg');
+            const btnNext = document.getElementById('btn-next-stage');
+
+            if (isVictory) {
+                soundFx.playVictory();
+                title.innerText = 'ชัยชนะสุภาพบุรุษ!';
+                title.className = 'text-4xl md:text-5xl font-black font-game text-emerald-400 mb-2';
+                sub.innerText = `คุณได้เอาชนะ ${GameData.selectedStage.enemy.name} อย่างสมเกียรติ`;
+
+                // Score Calculation
+                const hpBonus = Math.round((this.player.hp / this.player.maxHp) * 3000);
+                const timeBonus = this.timer * 50;
+                const totalScore = Math.round(this.score + hpBonus + timeBonus);
+
+                // Rank Calculation
+                let rank = 'C';
+                if (totalScore > 10000 && this.player.hp / this.player.maxHp > 0.6) rank = 'S';
+                else if (totalScore > 7500) rank = 'A';
+                else if (totalScore > 4500) rank = 'B';
+
+                rankEl.innerText = rank;
+                scoreEl.innerText = totalScore.toLocaleString();
+                comboEl.innerText = `Max Combo: ${this.maxCombo} Hits`;
+
+                // Unlock next stage logic
+                if (GameData.selectedStage.id === GameData.unlockedStage && GameData.unlockedStage < 5) {
+                    GameData.unlockedStage++;
+                    GameData.save();
+                    unlockMsg.classList.remove('hidden');
+                } else {
+                    unlockMsg.classList.add('hidden');
+                }
+
+                if (GameData.selectedStage.id < 5) {
+                    btnNext.classList.remove('hidden');
+                } else {
+                    btnNext.classList.add('hidden');
+                }
+
+            } else {
+                title.innerText = 'พ่ายแพ้...';
+                title.className = 'text-4xl md:text-5xl font-black font-game text-red-500 mb-2';
+                sub.innerText = 'อย่าเพิ่งท้อแท้ ฝึกฝนและกลับมาสู้ใหม่อีกครั้ง!';
+
+                rankEl.innerText = 'D';
+                scoreEl.innerText = '0';
+                comboEl.innerText = `Max Combo: ${this.maxCombo} Hits`;
+                unlockMsg.classList.add('hidden');
+                btnNext.classList.add('hidden');
+            }
+        }
+
+        drawBackground(ctx) {
+            const stg = GameData.selectedStage;
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, stg.bgGradient[0]);
+            grad.addColorStop(1, stg.bgGradient[1]);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stage Floor
+            const groundY = canvas.height - 80;
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, groundY, canvas.width, 80);
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+        }
+
+        render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (this.state === 'PLAYING') {
+                this.drawBackground(ctx);
+                
+                ctx.save();
+                this.player.draw(ctx);
+                this.enemy.draw(ctx);
+                fx.updateAndDraw(ctx);
+                ctx.restore();
+            } else {
+                // Menu background loop grid
+                ctx.fillStyle = '#090d16';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    }
+
+    const game = new GameEngine();
+
+    function renderCharSelect() {
+        const charList = document.getElementById('char-list');
+        charList.innerHTML = '';
+
+        CHARACTERS.forEach((c) => {
+            const isSelected = GameData.selectedChar.id === c.id;
+            const card = document.createElement('div');
+            card.className = `glass-panel p-4 rounded-2xl border cursor-pointer transition-all transform hover:-translate-y-1 flex flex-col justify-between ${
+                isSelected ? 'border-cyan-400 bg-cyan-950/30 ring-2 ring-cyan-500/50' : 'border-slate-800 hover:border-slate-600'
+            }`;
+            card.onclick = () => {
+                GameData.selectedChar = c;
+                renderCharSelect();
+            };
+
+            card.innerHTML = `
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg" style="background-color: ${c.color}">
+                        <i class="fa-solid ${c.avatarIcon}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold font-game text-white text-base">${c.name}</h4>
+                        <p class="text-[11px] text-slate-400">${c.title}</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-300 mb-3">${c.desc}</p>
+                <div class="space-y-1 text-[11px] font-mono text-slate-400">
+                    <div class="flex justify-between"><span>HP:</span><span class="text-emerald-400">${c.hp}</span></div>
+                    <div class="flex justify-between"><span>ATK:</span><span class="text-amber-400">${c.atkPower}</span></div>
+                    <div class="flex justify-between"><span>SPD:</span><span class="text-cyan-400">${c.speed}</span></div>
+                </div>
+            `;
+            charList.appendChild(card);
+        });
+    }
+
+    function renderStageSelect() {
+        const stageList = document.getElementById('stage-list');
+        stageList.innerHTML = '';
+
+        STAGES.forEach((s) => {
+            const isUnlocked = s.id <= GameData.unlockedStage;
+            const isSelected = GameData.selectedStage.id === s.id;
+
+            const card = document.createElement('div');
+            card.className = `glass-panel p-4 rounded-2xl border flex flex-col justify-between transition-all ${
+                !isUnlocked 
+                    ? 'opacity-50 border-slate-800 cursor-not-allowed' 
+                    : isSelected 
+                    ? 'border-amber-400 bg-amber-950/20 ring-2 ring-amber-500/40 cursor-pointer' 
+                    : 'border-slate-800 hover:border-slate-600 cursor-pointer'
+            }`;
+
+            if (isUnlocked) {
+                card.onclick = () => {
+                    GameData.selectedStage = s;
+                    renderStageSelect();
+                };
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">STAGE ${s.id}</span>
+                        ${!isUnlocked ? '<i class="fa-solid fa-lock text-red-400 text-xs"></i>' : '<i class="fa-solid fa-lock-open text-emerald-400 text-xs"></i>'}
+                    </div>
+                    <h4 class="font-bold font-game text-white text-base mb-1">${s.name}</h4>
+                    <p class="text-xs text-slate-300 mb-3">${s.desc}</p>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-amber-300 font-semibold">
+                    ศัตรู: ${s.enemy.name}
+                </div>
+            `;
+            stageList.appendChild(card);
+        });
+    }
+
+    document.getElementById('btn-start').onclick = () => {
+        document.getElementById('screen-menu').classList.add('hidden');
+        document.getElementById('screen-char-select').classList.remove('hidden');
+        document.getElementById('screen-char-select').classList.add('flex');
+        renderCharSelect();
+    };
+
+    document.getElementById('btn-controls').onclick = () => {
+        document.getElementById('modal-controls').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-close-controls').onclick = () => {
+        document.getElementById('modal-controls').classList.add('hidden');
+    };
+
+    document.getElementById('btn-reset-data').onclick = () => {
+        GameData.reset();
+        renderStageSelect();
+    };
+
+    document.getElementById('btn-back-to-menu').onclick = () => {
+        document.getElementById('screen-char-select').classList.add('hidden');
+        document.getElementById('screen-menu').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-confirm-char').onclick = () => {
+        document.getElementById('screen-char-select').classList.add('hidden');
+        document.getElementById('screen-stage-select').classList.remove('hidden');
+        document.getElementById('screen-stage-select').classList.add('flex');
+        renderStageSelect();
+    };
+
+    document.getElementById('btn-back-to-char').onclick = () => {
+        document.getElementById('screen-stage-select').classList.add('hidden');
+        document.getElementById('screen-char-select').classList.remove('hidden');
+    };
+
+    document.getElementById('btn-start-fight').onclick = () => {
+        document.getElementById('screen-stage-select').classList.add('hidden');
+        game.initMatch();
+    };
+
+    document.getElementById('btn-next-stage').onclick = () => {
+        if (GameData.selectedStage.id < 5) {
+            GameData.selectedStage = STAGES[GameData.selectedStage.id]; // Next stage index
+            document.getElementById('screen-result').classList.add('hidden');
+            game.initMatch();
+        }
+    };
+
+    document.getElementById('btn-retry-stage').onclick = () => {
+        document.getElementById('screen-result').classList.add('hidden');
+        game.initMatch();
+    };
+
+    document.getElementById('btn-result-stage-select').onclick = () => {
+        document.getElementById('screen-result').classList.add('hidden');
+        document.getElementById('screen-stage-select').classList.remove('hidden');
+        document.getElementById('screen-stage-select').classList.add('flex');
+        renderStageSelect();
+    };
+
+    function gameLoop() {
+        game.update();
+        game.render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = () => {
+        gameLoop();
+    };
+    </script>
+</body>
+</html>
